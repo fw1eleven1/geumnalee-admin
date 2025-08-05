@@ -1,4 +1,5 @@
 import { getAuthHeaders } from '@/lib/auth-utils';
+import TapasList from './_components/TapasList';
 
 interface ApiResponse<T> {
 	data: T[];
@@ -53,18 +54,7 @@ export default async function TapasPage() {
 						</h2>
 						<div className='space-y-3'>
 							{main.data && main.data.length > 0 ? (
-								main.data.map((item: TapasMainType) => (
-									<div
-										key={item.id}
-										className='bg-gradient-to-r from-gray-700 to-gray-600 p-4 rounded-xl border border-gray-600 hover:shadow-md transition-all duration-300 hover:scale-105 cursor-pointer group'>
-										<div className='flex items-center justify-between'>
-											<span className='text-lg font-medium text-gray-200 group-hover:text-gray-100 transition-colors'>
-												{item.name}
-											</span>
-											<span className='text-sm text-gray-400'>{item.price.toLocaleString()}원</span>
-										</div>
-									</div>
-								))
+								main.data.map((item: TapasMainType) => <TapasList key={item.id} item={item} />)
 							) : (
 								<div className='text-center py-8 text-gray-400'>등록된 TAPAS가 없습니다.</div>
 							)}
@@ -78,18 +68,7 @@ export default async function TapasPage() {
 						</h2>
 						<div className='space-y-3'>
 							{side.data && side.data.length > 0 ? (
-								side.data.map((item: TapasSideType) => (
-									<div
-										key={item.id}
-										className='bg-gradient-to-r from-gray-700 to-gray-600 p-4 rounded-xl border border-gray-600 hover:shadow-md transition-all duration-300 hover:scale-105 cursor-pointer group'>
-										<div className='flex items-center justify-between'>
-											<span className='text-lg font-medium text-gray-200 group-hover:text-gray-100 transition-colors'>
-												{item.name}
-											</span>
-											<span className='text-sm text-gray-400'>{item.price.toLocaleString()}원</span>
-										</div>
-									</div>
-								))
+								side.data.map((item: TapasSideType) => <TapasList key={item.id} item={item} />)
 							) : (
 								<div className='text-center py-8 text-gray-400'>등록된 TAPAS가 없습니다.</div>
 							)}

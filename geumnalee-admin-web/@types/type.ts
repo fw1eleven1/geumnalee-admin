@@ -3,8 +3,8 @@ type TapasType = {
 	type: 'main' | 'side';
 	name: string;
 	price: number;
-	image: string;
-	description: string;
+	img: string;
+	desc: string;
 };
 
 type TapasMainType = TapasType & {

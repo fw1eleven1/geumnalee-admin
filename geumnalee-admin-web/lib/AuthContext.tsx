@@ -81,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 			if (data.success) {
 				setIsAuthenticated(true);
+				window.location.reload();
 				return true;
 			} else {
 				return false;

@@ -4,8 +4,20 @@ import mysql from 'mysql2';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
+import multer from 'multer';
+import path from 'path';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 dotenv.config();
+
+const r2Client = new S3Client({
+	region: 'auto',
+	endpoint: process.env.R2_ENDPOINT,
+	credentials: {
+		accessKeyId: process.env.R2_ACCESS_KEY_ID,
+		secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+	},
+});
 
 const app = express();
 
@@ -21,6 +33,55 @@ app.use(cookieParser());
 const SECRET_KEY = process.env.AUTH_SECRET_KEY;
 const CORRECT_PASSWORD = process.env.AUTH_PASSWORD;
 const EXPIRATION_TIME = '1h';
+
+// Multer 설정 (메모리에 파일 저장)
+const upload = multer({
+	storage: multer.memoryStorage(),
+	limits: {
+		fileSize: 10 * 1024 * 1024, // 10MB
+	},
+	fileFilter: (req, file, cb) => {
+		if (file.mimetype.startsWith('image/')) {
+			cb(null, true);
+		} else {
+			cb(new Error('이미지 파일만 업로드 가능합니다.'), false);
+		}
+	},
+});
+
+// R2에 파일 업로드 함수
+async function uploadToR2(fileBuffer, filename, contentType) {
+	const command = new PutObjectCommand({
+		Bucket: process.env.R2_BUCKET_NAME,
+		Key: `tapas/${filename}`,
+		Body: fileBuffer,
+		ContentType: contentType,
+		ACL: 'public-read',
+	});
+
+	await r2Client.send(command);
+	return `${process.env.R2_PUBLIC_URL}/tapas/${filename}`;
+}
+
+// R2에서 파일 삭제 함수
+async function deleteFromR2(imageUrl) {
+	if (!imageUrl || imageUrl.includes('geumnalee.pjsk.kr')) {
+		return; // 기본 이미지는 삭제하지 않음
+	}
+
+	try {
+		const key = imageUrl.split('/tapas/')[1];
+		if (key) {
+			const command = new DeleteObjectCommand({
+				Bucket: process.env.R2_BUCKET_NAME,
+				Key: `tapas/${key}`,
+			});
+			await r2Client.send(command);
+		}
+	} catch (error) {
+		console.error('R2 파일 삭제 오류:', error);
+	}
+}
 
 // 토큰 인증 미들웨어 (헤더 또는 쿠키에서 토큰 확인)
 const authenticateToken = (req, res, next) => {
@@ -135,6 +196,87 @@ app.get('/api/tapas/side', authenticateToken, async (req, res) => {
 		res.json({ success: true, data: rows });
 	} catch (error) {
 		res.status(500).json({ success: false, message: 'TAPAS 사이드 데이터 조회 실패' });
+	}
+});
+
+app.get('/api/tapas/:id', authenticateToken, async (req, res) => {
+	const { id } = req.params;
+
+	try {
+		const [rows] = await pool.query('SELECT * FROM tapas WHERE id = ?', [id]);
+		if (rows.length === 0) {
+			return res.status(404).json({ success: false, message: '타파스를 찾을 수 없습니다.' });
+		}
+		res.json({ success: true, data: rows[0] });
+	} catch (error) {
+		res.status(500).json({ success: false, message: 'TAPAS 데이터 조회 실패' });
+	}
+});
+
+// 타파스 수정 API (이미지 업로드 포함)
+app.put('/api/tapas/:id', authenticateToken, upload.single('image'), async (req, res) => {
+	const { id } = req.params;
+	const { data } = req.body;
+
+	console.log(data);
+	res.json({
+		success: true,
+		message: '뭔데시발.',
+	});
+
+	try {
+		// 기존 타파스 정보 조회
+		const [existingRows] = await pool.query('SELECT * FROM tapas WHERE id = ?', [id]);
+		if (existingRows.length === 0) {
+			return res.status(404).json({ success: false, message: '타파스를 찾을 수 없습니다.' });
+		}
+
+		const existingTapas = existingRows[0];
+		let imageUrl = existingTapas.img;
+
+		// 새 이미지가 업로드된 경우
+		if (req.file) {
+			// 기존 이미지 삭제
+			await deleteFromR2(existingTapas.img);
+
+			// 새 이미지 업로드
+			const filename = `tapas-${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(req.file.originalname)}`;
+			imageUrl = await uploadToR2(req.file.buffer, filename, req.file.mimetype);
+		}
+
+		// 타파스 데이터 파싱
+		const tapasData = JSON.parse(data);
+
+		// 업데이트할 데이터 준비
+		const updateData = {
+			name: tapasData.name,
+			price: tapasData.price,
+			type: tapasData.type,
+			desc: tapasData.desc,
+			img: imageUrl,
+		};
+
+		// 데이터베이스 업데이트
+		await pool.query('UPDATE tapas SET name = ?, price = ?, type = ?, desc = ?, img = ? WHERE id = ?', [
+			updateData.name,
+			updateData.price,
+			updateData.type,
+			updateData.desc,
+			updateData.img,
+			id,
+		]);
+
+		// 업데이트된 데이터 조회
+		const [updatedRows] = await pool.query('SELECT * FROM tapas WHERE id = ?', [id]);
+
+		res.json({
+			success: true,
+			message: '타파스가 성공적으로 수정되었습니다.',
+			data: updatedRows[0],
+		});
+	} catch (error) {
+		console.error('타파스 수정 오류:', error);
+		res.status(500).json({ success: false, message: '타파스 수정에 실패했습니다.' });
 	}
 });
 
