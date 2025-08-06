@@ -28,7 +28,14 @@ app.use(
 	})
 );
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// 응답 헤더에 charset 설정
+app.use((req, res, next) => {
+	res.setHeader('Content-Type', 'application/json; charset=utf-8');
+	next();
+});
 
 const SECRET_KEY = process.env.AUTH_SECRET_KEY;
 const CORRECT_PASSWORD = process.env.AUTH_PASSWORD;
@@ -65,10 +72,6 @@ async function uploadToR2(fileBuffer, filename, contentType) {
 
 // R2에서 파일 삭제 함수
 async function deleteFromR2(imageUrl) {
-	if (!imageUrl || imageUrl.includes('geumnalee.pjsk.kr')) {
-		return; // 기본 이미지는 삭제하지 않음
-	}
-
 	try {
 		const key = imageUrl.split('/tapas/')[1];
 		if (key) {
@@ -115,6 +118,8 @@ const pool = mysql
 		user: 'root',
 		password: '3456',
 		database: 'geumnalee',
+		charset: 'utf8mb4',
+		connectionLimit: 10,
 	})
 	.promise();
 
@@ -218,12 +223,6 @@ app.put('/api/tapas/:id', authenticateToken, upload.single('image'), async (req,
 	const { id } = req.params;
 	const { data } = req.body;
 
-	console.log(data);
-	res.json({
-		success: true,
-		message: '뭔데시발.',
-	});
-
 	try {
 		// 기존 타파스 정보 조회
 		const [existingRows] = await pool.query('SELECT * FROM tapas WHERE id = ?', [id]);
@@ -240,8 +239,15 @@ app.put('/api/tapas/:id', authenticateToken, upload.single('image'), async (req,
 			await deleteFromR2(existingTapas.img);
 
 			// 새 이미지 업로드
-			const filename = `tapas-${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(req.file.originalname)}`;
+			const filename = `${path.basename(req.file.originalname)}-${Date.now()}${path.extname(req.file.originalname)}`;
 			imageUrl = await uploadToR2(req.file.buffer, filename, req.file.mimetype);
+		}
+
+		// 이미지 삭제 요청이 있는 경우
+		if (req.body.deleteImage === 'true') {
+			// 기존 이미지 삭제
+			await deleteFromR2(existingTapas.img);
+			imageUrl = '';
 		}
 
 		// 타파스 데이터 파싱
@@ -257,7 +263,7 @@ app.put('/api/tapas/:id', authenticateToken, upload.single('image'), async (req,
 		};
 
 		// 데이터베이스 업데이트
-		await pool.query('UPDATE tapas SET name = ?, price = ?, type = ?, desc = ?, img = ? WHERE id = ?', [
+		await pool.query('UPDATE tapas SET `name` = ?, `price` = ?, `type` = ?, `desc` = ?, `img` = ? WHERE id = ?', [
 			updateData.name,
 			updateData.price,
 			updateData.type,
