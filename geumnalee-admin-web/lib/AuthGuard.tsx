@@ -55,5 +55,6 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 	}
 
 	// 인증된 경우 자식 컴포넌트 렌더링
+	// 서버 컴포넌트에서 null을 반환한 경우도 처리
 	return <>{children}</>;
 }

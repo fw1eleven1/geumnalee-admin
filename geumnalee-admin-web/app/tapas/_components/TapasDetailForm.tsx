@@ -2,23 +2,8 @@
 
 import { useState, useRef } from 'react';
 import Image from 'next/image';
-
-type TapasType = {
-	id: number;
-	type: 'main' | 'side';
-	name: string;
-	price: number;
-	img: string;
-	desc: string;
-};
-
-type TapasMainType = TapasType & {
-	type: 'main';
-};
-
-type TapasSideType = TapasType & {
-	type: 'side';
-};
+import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 interface TapasDetailFormProps {
 	tapas: TapasMainType | TapasSideType;
@@ -30,7 +15,10 @@ export default function TapasDetailForm({ tapas }: TapasDetailFormProps) {
 	const [isDragOver, setIsDragOver] = useState(false);
 	const [previewImage, setPreviewImage] = useState<string | null>(null);
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
+	const [isImageDeleted, setIsImageDeleted] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	const router = useRouter();
 
 	const handleInputChange = (field: keyof TapasType, value: string | number) => {
 		setEditedTapas({
@@ -44,13 +32,13 @@ export default function TapasDetailForm({ tapas }: TapasDetailFormProps) {
 
 		// 파일 타입 검증
 		if (!file.type.startsWith('image/')) {
-			alert('이미지 파일만 업로드 가능합니다.');
+			toast.error('이미지 파일만 업로드 가능합니다.');
 			return;
 		}
 
 		// 파일 크기 검증 (10MB)
 		if (file.size > 10 * 1024 * 1024) {
-			alert('파일 크기는 10MB 이하여야 합니다.');
+			toast.error('파일 크기는 10MB 이하여야 합니다.');
 			return;
 		}
 
@@ -59,8 +47,20 @@ export default function TapasDetailForm({ tapas }: TapasDetailFormProps) {
 		reader.onload = (e) => {
 			setPreviewImage(e.target?.result as string);
 			setSelectedFile(file);
+			setIsImageDeleted(false); // 새 이미지가 선택되면 삭제 상태 해제
 		};
 		reader.readAsDataURL(file);
+	};
+
+	const handleDeleteImage = () => {
+		setPreviewImage(null);
+		setSelectedFile(null);
+		setIsImageDeleted(true);
+		// 기존 이미지도 삭제 상태로 설정
+		setEditedTapas({
+			...editedTapas,
+			img: '',
+		});
 	};
 
 	const handleDragOver = (e: React.DragEvent) => {
@@ -93,13 +93,28 @@ export default function TapasDetailForm({ tapas }: TapasDetailFormProps) {
 	const handleSave = async () => {
 		setSaving(true);
 		try {
+			if (editedTapas.name === '') {
+				toast.error('이름을 입력해주세요.');
+				return;
+			}
+
+			if (editedTapas.price === 0) {
+				toast.error('가격을 입력해주세요.');
+				return;
+			}
+
+			if (editedTapas.desc === '') {
+				toast.error('설명을 입력해주세요.');
+				return;
+			}
+
 			// FormData를 사용하여 이미지와 정보를 함께 전송
 			const formData = new FormData();
 
 			// 타파스 정보를 JSON으로 추가
 			const tapasData = {
 				...editedTapas,
-				img: selectedFile ? '' : editedTapas.img, // 새 이미지가 있으면 빈 문자열로 설정
+				img: selectedFile ? '' : isImageDeleted ? '' : editedTapas.img, // 새 이미지가 있거나 삭제된 경우 빈 문자열로 설정
 			};
 			formData.append('data', JSON.stringify(tapasData));
 
@@ -108,34 +123,37 @@ export default function TapasDetailForm({ tapas }: TapasDetailFormProps) {
 				formData.append('image', selectedFile);
 			}
 
+			// 이미지가 삭제된 경우 삭제 플래그 추가
+			if (isImageDeleted) {
+				formData.append('deleteImage', 'true');
+			}
+
 			const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/tapas/${editedTapas.id}`, {
 				method: 'PUT',
 				body: formData,
+				credentials: 'include', // 쿠키 포함
 			});
 
 			const data = await response.json();
 			if (data.success) {
-				alert('저장되었습니다!');
+				toast.success('저장되었어요.');
+				router.push(`/tapas`);
 				// 저장 성공 후 미리보기 초기화
-				setPreviewImage(null);
-				setSelectedFile(null);
-				setEditedTapas({
-					...editedTapas,
-					img: data.data.img || editedTapas.img,
-				});
 			} else {
-				alert('저장에 실패했습니다.');
+				toast.error('저장에 실패했어요.');
 			}
 		} catch (error) {
 			console.error('Error saving tapas:', error);
-			alert('저장 중 오류가 발생했습니다.');
+			toast.error('저장에 실패했어요.');
 		} finally {
-			setSaving(false);
+			setTimeout(() => {
+				setSaving(false);
+			}, 1000);
 		}
 	};
 
 	// 표시할 이미지 결정 (미리보기 > 기존 이미지)
-	const displayImage = previewImage || editedTapas?.img || 'https://geumnalee.pjsk.kr/tapas/empty.png';
+	const displayImage = previewImage || (isImageDeleted ? null : editedTapas?.img) || null;
 
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-2 py-10 lg:p-6 lg:py-20'>
@@ -162,7 +180,8 @@ export default function TapasDetailForm({ tapas }: TapasDetailFormProps) {
 								onDragOver={handleDragOver}
 								onDragLeave={handleDragLeave}
 								onDrop={handleDrop}
-								className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+								onClick={() => fileInputRef.current?.click()}
+								className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${
 									isDragOver ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 hover:border-gray-500'
 								}`}>
 								<div className='space-y-4'>
@@ -181,7 +200,10 @@ export default function TapasDetailForm({ tapas }: TapasDetailFormProps) {
 										<p className='text-gray-400 text-sm mt-1'>PNG, JPG, GIF 최대 10MB</p>
 									</div>
 									<button
-										onClick={() => fileInputRef.current?.click()}
+										onClick={(e) => {
+											e.stopPropagation();
+											fileInputRef.current?.click();
+										}}
 										className='bg-gray-700 hover:bg-gray-600 text-gray-200 px-4 py-2 rounded-lg transition-colors'>
 										파일 선택
 									</button>
@@ -203,8 +225,17 @@ export default function TapasDetailForm({ tapas }: TapasDetailFormProps) {
 											e.currentTarget.src = 'https://geumnalee.pjsk.kr/tapas/empty.png';
 										}}
 									/>
+									{/* 삭제 버튼 */}
+									<button
+										onClick={handleDeleteImage}
+										className='absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-lg'
+										title='이미지 삭제'>
+										<svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+											<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M6 18L18 6M6 6l12 12' />
+										</svg>
+									</button>
 									{previewImage && (
-										<div className='absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded'>미리보기</div>
+										<div className='absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded'>미리보기</div>
 									)}
 								</div>
 							)}
@@ -264,7 +295,7 @@ export default function TapasDetailForm({ tapas }: TapasDetailFormProps) {
 				<button
 					onClick={handleSave}
 					disabled={saving}
-					className='w-full mt-4 bg-gradient-to-r from-blue-600 to-purple-600 text-gray-200 px-6 py-2 rounded-lg font-semibold hover:from-gray-600 hover:to-gray-500 transition-all duration-300 disabled:opacity-50 border border-gray-600'>
+					className='w-full mt-4 bg-gradient-to-r from-blue-600 to-purple-600 text-gray-200 px-6 py-2 rounded-lg font-semibold transition-all duration-300 disabled:opacity-50 border border-gray-600 hover:scale-105 cursor-pointer'>
 					{saving ? '저장 중...' : '저장'}
 				</button>
 			</div>

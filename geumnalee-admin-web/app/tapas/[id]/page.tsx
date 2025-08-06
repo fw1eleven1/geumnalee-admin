@@ -1,6 +1,6 @@
 import { getAuthHeaders } from '@/lib/auth-utils';
 import NotFound from '@/app/not-found';
-import TapasDetailForm from './_components/TapasDetailForm';
+import TapasDetailForm from '../_components/TapasDetailForm';
 
 type TapasType = {
 	id: number;
@@ -23,6 +23,11 @@ export default async function TapasDetailPage({ params }: { params: Promise<{ id
 	const { id } = await params;
 
 	const headers = await getAuthHeaders();
+
+	// 토큰이 없으면 인증되지 않은 상태로 처리
+	if (!headers) {
+		return null;
+	}
 
 	const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/tapas/${id}`, {
 		method: 'GET',

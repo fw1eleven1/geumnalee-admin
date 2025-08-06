@@ -6,10 +6,16 @@ export async function getAuthToken(): Promise<string | null> {
 	return token?.value || null;
 }
 
-export async function getAuthHeaders(): Promise<Record<string, string>> {
+export async function getAuthHeaders(): Promise<Record<string, string> | null> {
 	const token = await getAuthToken();
+
+	// 토큰이 없으면 null 반환
+	if (!token) {
+		return null;
+	}
+
 	return {
 		'Content-Type': 'application/json',
-		...(token && { Authorization: `Bearer ${token}` }),
+		Authorization: `Bearer ${token}`,
 	};
 }

@@ -4,6 +4,7 @@ import './globals.css';
 import Header from '@/components/common/Header';
 import { AuthProvider } from '@/lib/AuthContext';
 import AuthGuard from '@/lib/AuthGuard';
+import { Toaster } from 'react-hot-toast';
 
 const geistSans = Geist({
 	variable: '--font-geist-sans',
@@ -36,6 +37,7 @@ export default function RootLayout({
 						</div>
 					</AuthGuard>
 				</AuthProvider>
+				<Toaster position='top-right' containerClassName='mt-4' />
 			</body>
 		</html>
 	);
