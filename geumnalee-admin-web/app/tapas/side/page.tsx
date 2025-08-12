@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import TapasList from '../_components/TapasList';
 import TapasTabs from '../_components/TapasTabs';
+import NewTapasButton from '../_components/NewTapasButton';
 
 export default function TapasSidePage() {
 	const [sideData, setSideData] = useState<TapasSideType[]>([]);
@@ -76,10 +77,13 @@ export default function TapasSidePage() {
 				{/* 컨텐츠 영역 */}
 				<div className='bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-700'>
 					{/* 탭 헤더 */}
-					<h2 className='text-2xl font-semibold text-gray-200 mb-6 flex items-center'>
-						<span className='w-3 h-3 bg-gray-500 rounded-full mr-3'></span>
-						사이드
-					</h2>
+					<div className='flex justify-between items-center mb-6'>
+						<h2 className='text-2xl font-semibold text-gray-200 flex items-center'>
+							<span className='w-3 h-3 bg-gray-500 rounded-full mr-3'></span>
+							사이드
+						</h2>
+						<NewTapasButton type='side' />
+					</div>
 
 					{/* 로딩 상태 */}
 					{loading && (

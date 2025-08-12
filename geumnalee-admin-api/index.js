@@ -187,7 +187,7 @@ app.post('/api/auth/verify', (req, res) => {
 // 타파스 메인
 app.get('/api/tapas/main', authenticateToken, async (req, res) => {
 	try {
-		const [rows] = await pool.query('SELECT * FROM tapas WHERE type = "main" ORDER BY sort_order ASC');
+		const [rows] = await pool.query('SELECT * FROM tapas WHERE type = "main" AND is_deleted = 0 ORDER BY sort_order ASC');
 		res.json({ success: true, data: rows });
 	} catch (error) {
 		res.status(500).json({ success: false, message: 'TAPAS 메인 데이터 조회 실패' });
@@ -197,7 +197,7 @@ app.get('/api/tapas/main', authenticateToken, async (req, res) => {
 // 타파스 사이드
 app.get('/api/tapas/side', authenticateToken, async (req, res) => {
 	try {
-		const [rows] = await pool.query('SELECT * FROM tapas WHERE type = "side" ORDER BY sort_order ASC');
+		const [rows] = await pool.query('SELECT * FROM tapas WHERE type = "side" AND is_deleted = 0 ORDER BY sort_order ASC');
 		res.json({ success: true, data: rows });
 	} catch (error) {
 		res.status(500).json({ success: false, message: 'TAPAS 사이드 데이터 조회 실패' });
@@ -208,7 +208,7 @@ app.get('/api/tapas/:id', authenticateToken, async (req, res) => {
 	const { id } = req.params;
 
 	try {
-		const [rows] = await pool.query('SELECT * FROM tapas WHERE id = ?', [id]);
+		const [rows] = await pool.query('SELECT * FROM tapas WHERE id = ? AND is_deleted = 0', [id]);
 		if (rows.length === 0) {
 			return res.status(404).json({ success: false, message: '타파스를 찾을 수 없습니다.' });
 		}
@@ -225,7 +225,7 @@ app.put('/api/tapas/:id', authenticateToken, upload.single('image'), async (req,
 
 	try {
 		// 기존 타파스 정보 조회
-		const [existingRows] = await pool.query('SELECT * FROM tapas WHERE id = ?', [id]);
+		const [existingRows] = await pool.query('SELECT * FROM tapas WHERE id = ? AND is_deleted = 0', [id]);
 		if (existingRows.length === 0) {
 			return res.status(404).json({ success: false, message: '타파스를 찾을 수 없습니다.' });
 		}
@@ -273,7 +273,7 @@ app.put('/api/tapas/:id', authenticateToken, upload.single('image'), async (req,
 		]);
 
 		// 업데이트된 데이터 조회
-		const [updatedRows] = await pool.query('SELECT * FROM tapas WHERE id = ?', [id]);
+		const [updatedRows] = await pool.query('SELECT * FROM tapas WHERE id = ? AND is_deleted = 0', [id]);
 
 		res.json({
 			success: true,
@@ -283,6 +283,58 @@ app.put('/api/tapas/:id', authenticateToken, upload.single('image'), async (req,
 	} catch (error) {
 		console.error('타파스 수정 오류:', error);
 		res.status(500).json({ success: false, message: '타파스 수정에 실패했습니다.' });
+	}
+});
+
+// 타파스 새 메뉴 추가 API (이미지 업로드 포함)
+app.post('/api/tapas', authenticateToken, upload.single('image'), async (req, res) => {
+	const { data } = req.body;
+
+	try {
+		// 타파스 데이터 파싱
+		const tapasData = JSON.parse(data);
+		let imageUrl = '';
+
+		// 이미지가 업로드된 경우
+		if (req.file) {
+			// 새 이미지 업로드
+			const filename = `${path.basename(req.file.originalname)}-${Date.now()}${path.extname(req.file.originalname)}`;
+			imageUrl = await uploadToR2(req.file.buffer, filename, req.file.mimetype);
+		}
+
+		// 새로 추가할 데이터 준비
+		const insertData = {
+			name: tapasData.name,
+			price: tapasData.price,
+			type: tapasData.type,
+			desc: tapasData.desc,
+			img: imageUrl,
+		};
+
+		const sortOrder = await pool.query(
+			'SELECT MAX(sort_order) AS max_order FROM tapas WHERE type = ? AND is_deleted = 0',
+			[tapasData.type]
+		);
+		const maxSortOrder = sortOrder[0][0].max_order;
+		insertData.sort_order = maxSortOrder + 1;
+
+		// 데이터베이스에 새 메뉴 추가
+		const [result] = await pool.query(
+			'INSERT INTO tapas (`name`, `price`, `type`, `desc`, `img`, `sort_order`) VALUES (?, ?, ?, ?, ?, ?)',
+			[insertData.name, insertData.price, insertData.type, insertData.desc, insertData.img, insertData.sort_order]
+		);
+
+		res.json({
+			success: true,
+			message: '새 메뉴가 성공적으로 추가되었습니다.',
+			data: {
+				id: result.insertId,
+				...insertData,
+			},
+		});
+	} catch (error) {
+		console.error('타파스 추가 오류:', error);
+		res.status(500).json({ success: false, message: '새 메뉴 추가에 실패했습니다.' });
 	}
 });
 
