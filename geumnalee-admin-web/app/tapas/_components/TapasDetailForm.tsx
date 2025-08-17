@@ -16,6 +16,7 @@ export default function TapasDetailForm({ tapas }: TapasDetailFormProps) {
 	const [previewImage, setPreviewImage] = useState<string | null>(null);
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 	const [isImageDeleted, setIsImageDeleted] = useState(false);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const router = useRouter();
@@ -145,6 +146,36 @@ export default function TapasDetailForm({ tapas }: TapasDetailFormProps) {
 		} catch (error) {
 			console.error('Error saving tapas:', error);
 			toast.error('저장에 실패했어요.');
+		} finally {
+			setTimeout(() => {
+				setSaving(false);
+			}, 1000);
+		}
+	};
+
+	const handleDelete = async () => {
+		setShowDeleteModal(true);
+	};
+
+	const confirmDelete = async () => {
+		setShowDeleteModal(false);
+		setSaving(true);
+		try {
+			const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/tapas/${editedTapas.id}`, {
+				method: 'DELETE',
+				credentials: 'include', // 쿠키 포함
+			});
+
+			const data = await response.json();
+			if (data.success) {
+				toast.success('삭제되었어요.');
+				router.push(`/tapas`);
+			} else {
+				toast.error('삭제에 실패했어요.');
+			}
+		} catch (error) {
+			console.error('Error deleting tapas:', error);
+			toast.error('삭제에 실패했어요.');
 		} finally {
 			setTimeout(() => {
 				setSaving(false);
@@ -298,7 +329,50 @@ export default function TapasDetailForm({ tapas }: TapasDetailFormProps) {
 					className='w-full mt-4 bg-gradient-to-r from-blue-600 to-purple-600 text-gray-200 px-6 py-2 rounded-lg font-semibold transition-all duration-300 disabled:opacity-50 border border-gray-600 hover:scale-105 cursor-pointer'>
 					{saving ? '저장 중...' : '저장'}
 				</button>
+				<button
+					onClick={handleDelete}
+					disabled={saving}
+					className='w-full mt-4 bg-red-600 text-gray-200 px-6 py-2 rounded-lg font-semibold transition-all duration-300 disabled:opacity-50 border border-gray-600 hover:scale-105 cursor-pointer'>
+					{saving ? '삭제 중...' : '삭제'}
+				</button>
 			</div>
+
+			{/* 삭제 확인 모달 */}
+			{showDeleteModal && (
+				<div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
+					<div className='bg-gray-800 rounded-2xl p-6 max-w-md w-full border border-gray-700'>
+						<div className='text-center'>
+							<div className='mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4'>
+								<svg className='h-6 w-6 text-red-600' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+									<path
+										strokeLinecap='round'
+										strokeLinejoin='round'
+										strokeWidth={2}
+										d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z'
+									/>
+								</svg>
+							</div>
+							<h3 className='text-lg font-medium text-gray-200 mb-2'>타파스 삭제</h3>
+							<p className='text-gray-400 mb-6'>
+								<strong className='text-gray-200'>{editedTapas?.name}</strong>을(를) 정말로 삭제하시겠습니까?
+							</p>
+							<div className='flex space-x-3'>
+								<button
+									onClick={() => setShowDeleteModal(false)}
+									className='flex-1 px-4 py-2 bg-gray-600 text-gray-200 rounded-lg hover:bg-gray-500 transition-colors'>
+									취소
+								</button>
+								<button
+									onClick={confirmDelete}
+									disabled={saving}
+									className='flex-1 px-4 py-2 bg-red-600 text-gray-200 rounded-lg hover:bg-red-500 transition-colors disabled:opacity-50'>
+									{saving ? '삭제 중...' : '삭제'}
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

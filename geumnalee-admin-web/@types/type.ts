@@ -5,6 +5,7 @@ type TapasType = {
 	price: number;
 	img: string;
 	desc: string;
+	order?: number;
 };
 
 type TapasMainType = TapasType & {

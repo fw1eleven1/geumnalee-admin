@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import multer from 'multer';
 import path from 'path';
+import sharp from 'sharp';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 dotenv.config();
@@ -57,17 +58,33 @@ const upload = multer({
 });
 
 // R2에 파일 업로드 함수
-async function uploadToR2(fileBuffer, filename, contentType) {
+async function uploadToR2(fileBuffer, filename) {
+	const quality = 80;
+
+	let sharpInstance = sharp(fileBuffer);
+	// const metadata = await sharpInstance.metadata();
+	// const width = metadata.width;
+
+	// // width에 맞춰서 height는 원본 비율 유지
+	// sharpInstance = sharpInstance.resize(width, null, {
+	// 	fit: 'inside',
+	// 	withoutEnlargement: true, // 원본보다 크게 확대하지 않음
+	// });
+
+	// webp로 변환
+	sharpInstance = sharpInstance.webp({ quality });
+	const resizedBuffer = await sharpInstance.toBuffer();
+
 	const command = new PutObjectCommand({
 		Bucket: process.env.R2_BUCKET_NAME,
-		Key: `tapas/${filename}`,
-		Body: fileBuffer,
-		ContentType: contentType,
+		Key: `tapas/${filename}.webp`,
+		Body: resizedBuffer,
+		ContentType: 'image/webp',
 		ACL: 'public-read',
 	});
 
 	await r2Client.send(command);
-	return `${process.env.R2_PUBLIC_URL}/tapas/${filename}`;
+	return `${process.env.R2_PUBLIC_URL}/tapas/${filename}.webp`;
 }
 
 // R2에서 파일 삭제 함수
@@ -114,7 +131,7 @@ const authenticateToken = (req, res, next) => {
 
 const pool = mysql
 	.createPool({
-		host: 'localhost',
+		host: 'host.docker.internal',
 		user: 'root',
 		password: '3456',
 		database: 'geumnalee',
@@ -204,6 +221,102 @@ app.get('/api/tapas/side', authenticateToken, async (req, res) => {
 	}
 });
 
+// 메인 타파스 순서 변경 API
+app.put('/api/tapas/main/order', authenticateToken, async (req, res) => {
+	try {
+		const { order } = req.body;
+
+		if (!Array.isArray(order) || order.length === 0) {
+			return res.status(400).json({ success: false, message: '유효하지 않은 순서 데이터입니다.' });
+		}
+
+		// 트랜잭션 시작
+		await pool.query('START TRANSACTION');
+
+		try {
+			// 각 아이템의 순서를 업데이트
+			for (let i = 0; i < order.length; i++) {
+				const id = order[i];
+				const sortOrder = i + 1;
+
+				await pool.query('UPDATE tapas SET sort_order = ? WHERE id = ? AND type = "main" AND is_deleted = 0', [
+					sortOrder,
+					id,
+				]);
+			}
+
+			// 트랜잭션 커밋
+			await pool.query('COMMIT');
+
+			// 업데이트된 순서로 데이터 조회
+			const [updatedRows] = await pool.query(
+				'SELECT * FROM tapas WHERE type = "main" AND is_deleted = 0 ORDER BY sort_order ASC'
+			);
+
+			res.json({
+				success: true,
+				message: '메인 타파스 순서가 성공적으로 변경되었습니다.',
+				data: updatedRows,
+			});
+		} catch (error) {
+			// 오류 발생 시 롤백
+			await pool.query('ROLLBACK');
+			throw error;
+		}
+	} catch (error) {
+		console.error('메인 타파스 순서 변경 오류:', error);
+		res.status(500).json({ success: false, message: '메인 타파스 순서 변경에 실패했습니다.' });
+	}
+});
+
+// 사이드 타파스 순서 변경 API
+app.put('/api/tapas/side/order', authenticateToken, async (req, res) => {
+	try {
+		const { order } = req.body;
+
+		if (!Array.isArray(order) || order.length === 0) {
+			return res.status(400).json({ success: false, message: '유효하지 않은 순서 데이터입니다.' });
+		}
+
+		// 트랜잭션 시작
+		await pool.query('START TRANSACTION');
+
+		try {
+			// 각 아이템의 순서를 업데이트
+			for (let i = 0; i < order.length; i++) {
+				const id = order[i];
+				const sortOrder = i + 1;
+
+				await pool.query('UPDATE tapas SET sort_order = ? WHERE id = ? AND type = "side" AND is_deleted = 0', [
+					sortOrder,
+					id,
+				]);
+			}
+
+			// 트랜잭션 커밋
+			await pool.query('COMMIT');
+
+			// 업데이트된 순서로 데이터 조회
+			const [updatedRows] = await pool.query(
+				'SELECT * FROM tapas WHERE type = "side" AND is_deleted = 0 ORDER BY sort_order ASC'
+			);
+
+			res.json({
+				success: true,
+				message: '사이드 타파스 순서가 성공적으로 변경되었습니다.',
+				data: updatedRows,
+			});
+		} catch (error) {
+			// 오류 발생 시 롤백
+			await pool.query('ROLLBACK');
+			throw error;
+		}
+	} catch (error) {
+		console.error('사이드 타파스 순서 변경 오류:', error);
+		res.status(500).json({ success: false, message: '사이드 타파스 순서 변경에 실패했습니다.' });
+	}
+});
+
 app.get('/api/tapas/:id', authenticateToken, async (req, res) => {
 	const { id } = req.params;
 
@@ -239,8 +352,8 @@ app.put('/api/tapas/:id', authenticateToken, upload.single('image'), async (req,
 			await deleteFromR2(existingTapas.img);
 
 			// 새 이미지 업로드
-			const filename = `${path.basename(req.file.originalname)}-${Date.now()}${path.extname(req.file.originalname)}`;
-			imageUrl = await uploadToR2(req.file.buffer, filename, req.file.mimetype);
+			const filename = `${path.basename(req.file.originalname)}-${Date.now()}`;
+			imageUrl = await uploadToR2(req.file.buffer, filename);
 		}
 
 		// 이미지 삭제 요청이 있는 경우
@@ -286,6 +399,38 @@ app.put('/api/tapas/:id', authenticateToken, upload.single('image'), async (req,
 	}
 });
 
+// 타파스 삭제 API
+app.delete('/api/tapas/:id', authenticateToken, async (req, res) => {
+	const { id } = req.params;
+
+	try {
+		// 기존 타파스 데이터 조회
+		const [existingRows] = await pool.query('SELECT * FROM tapas WHERE id = ? AND is_deleted = 0', [id]);
+
+		if (existingRows.length === 0) {
+			return res.status(404).json({ success: false, message: '타파스를 찾을 수 없습니다.' });
+		}
+
+		const existingTapas = existingRows[0];
+
+		// 이미지가 있는 경우 R2에서 삭제
+		if (existingTapas.img) {
+			await deleteFromR2(existingTapas.img);
+		}
+
+		// 데이터베이스에서 논리적 삭제 (is_deleted = 1로 설정)
+		await pool.query('UPDATE tapas SET is_deleted = 1 WHERE id = ?', [id]);
+
+		res.json({
+			success: true,
+			message: '타파스가 성공적으로 삭제되었습니다.',
+		});
+	} catch (error) {
+		console.error('타파스 삭제 오류:', error);
+		res.status(500).json({ success: false, message: '타파스 삭제에 실패했습니다.' });
+	}
+});
+
 // 타파스 새 메뉴 추가 API (이미지 업로드 포함)
 app.post('/api/tapas', authenticateToken, upload.single('image'), async (req, res) => {
 	const { data } = req.body;
@@ -298,8 +443,8 @@ app.post('/api/tapas', authenticateToken, upload.single('image'), async (req, re
 		// 이미지가 업로드된 경우
 		if (req.file) {
 			// 새 이미지 업로드
-			const filename = `${path.basename(req.file.originalname)}-${Date.now()}${path.extname(req.file.originalname)}`;
-			imageUrl = await uploadToR2(req.file.buffer, filename, req.file.mimetype);
+			const filename = `${path.basename(req.file.originalname)}-${Date.now()}`;
+			imageUrl = await uploadToR2(req.file.buffer, filename);
 		}
 
 		// 새로 추가할 데이터 준비
