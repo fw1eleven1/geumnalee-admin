@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { deleteFromR2 } from '@/lib/cloudflare/r2';
+import { revalidateMenuPages } from '@/lib/revalidate-menu';
 import type { WineFormData, WineRatingInput } from '@/types';
 
 export async function createWine(
@@ -61,6 +62,7 @@ export async function createWine(
   }
 
   revalidatePath('/dashboard/wines');
+  revalidateMenuPages(); // menu 앱 캐시 갱신
   redirect(redirectUrl || '/dashboard/wines');
 }
 
@@ -143,6 +145,7 @@ export async function updateWine(
 
   revalidatePath('/dashboard/wines');
   revalidatePath(`/dashboard/wines/${id}`);
+  revalidateMenuPages(); // menu 앱 캐시 갱신
   redirect(redirectUrl || '/dashboard/wines');
 }
 
@@ -175,6 +178,7 @@ export async function deleteWine(id: string) {
   }
 
   revalidatePath('/dashboard/wines');
+  revalidateMenuPages(); // menu 앱 캐시 갱신
 }
 
 export async function toggleWineActive(id: string, isActive: boolean) {
@@ -190,6 +194,7 @@ export async function toggleWineActive(id: string, isActive: boolean) {
   }
 
   revalidatePath('/dashboard/wines');
+  revalidateMenuPages(); // menu 앱 캐시 갱신
 }
 
 export async function updateWineOrder(items: { id: string; display_order: number }[]) {
@@ -207,4 +212,5 @@ export async function updateWineOrder(items: { id: string; display_order: number
   }
 
   revalidatePath('/dashboard/wines');
+  revalidateMenuPages(); // menu 앱 캐시 갱신
 }

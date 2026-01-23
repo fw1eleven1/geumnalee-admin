@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { deleteFromR2 } from '@/lib/cloudflare/r2';
+import { revalidateMenuPages } from '@/lib/revalidate-menu';
 import type { TapasFormData } from '@/types';
 
 export async function createTapas(formData: TapasFormData, redirectUrl?: string) {
@@ -26,6 +27,7 @@ export async function createTapas(formData: TapasFormData, redirectUrl?: string)
   }
 
   revalidatePath('/dashboard/tapas');
+  revalidateMenuPages(); // menu 앱 캐시 갱신
   redirect(redirectUrl || '/dashboard/tapas');
 }
 
@@ -70,6 +72,7 @@ export async function updateTapas(id: string, formData: TapasFormData, redirectU
 
   revalidatePath('/dashboard/tapas');
   revalidatePath(`/dashboard/tapas/${id}`);
+  revalidateMenuPages(); // menu 앱 캐시 갱신
   redirect(redirectUrl || '/dashboard/tapas');
 }
 
@@ -102,6 +105,7 @@ export async function deleteTapas(id: string) {
   }
 
   revalidatePath('/dashboard/tapas');
+  revalidateMenuPages(); // menu 앱 캐시 갱신
 }
 
 export async function toggleTapasActive(id: string, isActive: boolean) {
@@ -117,6 +121,7 @@ export async function toggleTapasActive(id: string, isActive: boolean) {
   }
 
   revalidatePath('/dashboard/tapas');
+  revalidateMenuPages(); // menu 앱 캐시 갱신
 }
 
 export async function updateTapasOrder(items: { id: string; display_order: number }[]) {
@@ -134,4 +139,5 @@ export async function updateTapasOrder(items: { id: string; display_order: numbe
   }
 
   revalidatePath('/dashboard/tapas');
+  revalidateMenuPages(); // menu 앱 캐시 갱신
 }
