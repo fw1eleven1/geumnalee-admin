@@ -5,7 +5,6 @@ import TapasList from './TapasList';
 
 interface SearchParams {
   category?: 'main' | 'side';
-  search?: string;
 }
 
 export default async function TapasPage({
@@ -23,9 +22,6 @@ export default async function TapasPage({
 
   if (searchParams.category) {
     query = query.eq('category', searchParams.category);
-  }
-  if (searchParams.search) {
-    query = query.ilike('name', `%${searchParams.search}%`);
   }
 
   const { data: tapas, error } = await query;
@@ -66,33 +62,6 @@ export default async function TapasPage({
             사이드
           </Button>
         </Link>
-      </div>
-
-      {/* 필터 */}
-      <div className="bg-white p-3 md:p-4 rounded-lg shadow">
-        <form className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
-          <input
-            type="text"
-            name="search"
-            defaultValue={searchParams.search || ''}
-            placeholder="이름으로 검색..."
-            className="w-full sm:w-auto sm:flex-1 sm:max-w-xs px-3 py-2 border border-gray-300 rounded-md text-sm"
-          />
-
-          <div className="flex gap-2">
-            <Button type="submit" variant="secondary" size="sm" className="flex-1 sm:flex-none">
-              검색
-            </Button>
-
-            {(searchParams.category || searchParams.search) && (
-              <Link href="/dashboard/tapas" className="flex-1 sm:flex-none">
-                <Button type="button" variant="ghost" size="sm" className="w-full">
-                  필터 초기화
-                </Button>
-              </Link>
-            )}
-          </div>
-        </form>
       </div>
 
       <TapasList tapas={tapas || []} />

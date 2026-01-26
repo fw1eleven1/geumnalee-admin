@@ -6,7 +6,6 @@ import WineList from './WineList';
 interface SearchParams {
 	category?: 'conventional' | 'natural';
 	type?: string;
-	search?: string;
 }
 
 export default async function WinesPage({ searchParams }: { searchParams: SearchParams }) {
@@ -24,9 +23,6 @@ export default async function WinesPage({ searchParams }: { searchParams: Search
 	}
 	if (searchParams.type) {
 		query = query.eq('type', searchParams.type);
-	}
-	if (searchParams.search) {
-		query = query.or(`name.ilike.%${searchParams.search}%,eng_name.ilike.%${searchParams.search}%`);
 	}
 
 	const { data: wines, error } = await query;
@@ -76,23 +72,6 @@ export default async function WinesPage({ searchParams }: { searchParams: Search
 					))}
 				</div>
 			)}
-
-			{/* 필터 */}
-			<div className='bg-white p-3 md:p-4 rounded-lg shadow'>
-				<form className='flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4'>
-					<input
-						type='text'
-						name='search'
-						defaultValue={searchParams.search || ''}
-						placeholder='이름으로 검색...'
-						className='w-full sm:w-auto sm:flex-1 sm:max-w-xs px-3 py-2 border border-gray-300 rounded-md text-sm'
-					/>
-
-					<Button type='submit' variant='secondary' size='sm'>
-						검색
-					</Button>
-				</form>
-			</div>
 
 			<WineList wines={wines || []} />
 		</div>
