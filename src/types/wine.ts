@@ -26,6 +26,7 @@ export interface Wine {
   vivino: string | null;
   is_active: boolean;
   display_order: number;
+  stock: number;
   created_at: string;
   updated_at: string;
   ratings?: WineRating[];

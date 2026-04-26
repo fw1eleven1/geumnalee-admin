@@ -197,6 +197,25 @@ export async function toggleWineActive(id: string, isActive: boolean) {
   revalidateMenuPages(); // menu 앱 캐시 갱신
 }
 
+export async function updateWineStock(id: string, stock: number) {
+  if (stock < 0) {
+    throw new Error('재고는 0 이상이어야 합니다.');
+  }
+
+  const supabase = createClient();
+
+  const { error } = await supabase
+    .from('wines')
+    .update({ stock })
+    .eq('id', id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath('/dashboard/inventory');
+}
+
 export async function updateWineOrder(items: { id: string; display_order: number }[]) {
   const supabase = createClient();
 
