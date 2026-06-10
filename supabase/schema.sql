@@ -24,6 +24,7 @@ CREATE TABLE wines (
     vivino TEXT,
     is_active BOOLEAN DEFAULT true,
     display_order INTEGER DEFAULT 0,
+    stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -52,6 +53,18 @@ CREATE TABLE tapas (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 이 달의 와인 테이블
+CREATE TABLE monthly_wines (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    wine_id UUID REFERENCES wines(id) ON DELETE CASCADE,
+    discount_rate INTEGER NOT NULL DEFAULT 0 CHECK (discount_rate >= 0 AND discount_rate <= 100),
+    round_down_100 BOOLEAN DEFAULT false,
+    is_active BOOLEAN DEFAULT true,
+    display_order INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- 관리자 사용자 테이블 (Supabase Auth와 연동)
 CREATE TABLE admin_users (
     id UUID REFERENCES auth.users(id) PRIMARY KEY,
@@ -71,6 +84,9 @@ CREATE INDEX idx_tapas_category ON tapas(category);
 CREATE INDEX idx_tapas_is_active ON tapas(is_active);
 CREATE INDEX idx_tapas_display_order ON tapas(display_order);
 CREATE INDEX idx_wine_ratings_wine_id ON wine_ratings(wine_id);
+CREATE INDEX idx_monthly_wines_wine_id ON monthly_wines(wine_id);
+CREATE INDEX idx_monthly_wines_is_active ON monthly_wines(is_active);
+CREATE INDEX idx_monthly_wines_display_order ON monthly_wines(display_order);
 
 -- Updated_at 자동 업데이트 트리거
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -96,11 +112,17 @@ CREATE TRIGGER update_admin_users_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_monthly_wines_updated_at
+    BEFORE UPDATE ON monthly_wines
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
 -- RLS (Row Level Security) 정책
 ALTER TABLE wines ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wine_ratings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tapas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE monthly_wines ENABLE ROW LEVEL SECURITY;
 
 -- 읽기: 모든 사용자 허용 (공개 API용)
 CREATE POLICY "Allow public read on wines" ON wines
@@ -142,3 +164,16 @@ CREATE POLICY "Allow authenticated delete on tapas" ON tapas
 
 CREATE POLICY "Allow authenticated read on admin_users" ON admin_users
     FOR SELECT TO authenticated USING (true);
+
+-- monthly_wines RLS
+CREATE POLICY "Allow public read on monthly_wines" ON monthly_wines
+    FOR SELECT USING (true);
+
+CREATE POLICY "Allow authenticated insert on monthly_wines" ON monthly_wines
+    FOR INSERT TO authenticated WITH CHECK (true);
+
+CREATE POLICY "Allow authenticated update on monthly_wines" ON monthly_wines
+    FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+
+CREATE POLICY "Allow authenticated delete on monthly_wines" ON monthly_wines
+    FOR DELETE TO authenticated USING (true);
