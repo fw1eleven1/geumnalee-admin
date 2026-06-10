@@ -2,10 +2,16 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { clsx } from 'clsx';
 import { Button, Input } from '@/components/ui';
 import { calcDiscountedPrice } from '@/types';
 import { createMonthlyWine, updateMonthlyWine } from '@/actions/monthly-wines';
-import type { Wine, MonthlyWine } from '@/types';
+import type { Wine, MonthlyWine, WineCategory, WineType } from '@/types';
+
+const TYPES_BY_CATEGORY: Record<WineCategory, WineType[]> = {
+  conventional: ['Red', 'White', 'Sparkling', 'Champagne'],
+  natural: ['Red', 'White', 'Orange'],
+};
 
 interface MonthlyWineFormProps {
   wines: Wine[];
@@ -18,14 +24,32 @@ export default function MonthlyWineForm({ wines, monthlyWine, usedWineIds }: Mon
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  const initialWine = monthlyWine ? wines.find((w) => w.id === monthlyWine.wine_id) : undefined;
+
+  const [category, setCategory] = useState<WineCategory | ''>(initialWine?.category ?? '');
+  const [wineType, setWineType] = useState<WineType | ''>(initialWine?.type ?? '');
   const [wineId, setWineId] = useState(monthlyWine?.wine_id ?? '');
   const [discountRate, setDiscountRate] = useState(String(monthlyWine?.discount_rate ?? 0));
   const [roundDown100, setRoundDown100] = useState(monthlyWine?.round_down_100 ?? false);
   const [isActive, setIsActive] = useState(monthlyWine?.is_active ?? true);
 
-  const availableWines = wines.filter(
-    (w) => !usedWineIds.includes(w.id) || w.id === monthlyWine?.wine_id
-  );
+  const handleCategoryChange = (cat: WineCategory) => {
+    setCategory(cat);
+    setWineType('');
+    setWineId('');
+  };
+
+  const handleTypeChange = (type: WineType) => {
+    setWineType(type);
+    setWineId('');
+  };
+
+  const filteredWines = wines.filter((w) => {
+    const notUsed = !usedWineIds.includes(w.id) || w.id === monthlyWine?.wine_id;
+    const matchCategory = !category || w.category === category;
+    const matchType = !wineType || w.type === wineType;
+    return notUsed && matchCategory && matchType;
+  });
 
   const selectedWine = wines.find((w) => w.id === wineId);
   const discountRateNum = Math.min(100, Math.max(0, parseInt(discountRate) || 0));
@@ -69,16 +93,59 @@ export default function MonthlyWineForm({ wines, monthlyWine, usedWineIds }: Mon
       )}
 
       {/* 와인 선택 */}
-      <div>
-        <label className='block text-sm font-medium text-gray-700 mb-1'>
+      <div className='space-y-3'>
+        <label className='block text-sm font-medium text-gray-700'>
           와인 선택 <span className='text-red-500'>*</span>
         </label>
+
+        {/* 카테고리 탭 */}
+        <div className='flex gap-2'>
+          {(['conventional', 'natural'] as WineCategory[]).map((cat) => (
+            <button
+              key={cat}
+              type='button'
+              onClick={() => handleCategoryChange(cat)}
+              className={clsx(
+                'px-4 py-2 rounded-md text-sm font-medium transition-colors',
+                category === cat
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
+              )}>
+              {cat === 'conventional' ? 'Conventional' : 'Natural'}
+            </button>
+          ))}
+        </div>
+
+        {/* 타입 탭 */}
+        {category && (
+          <div className='flex gap-2 flex-wrap'>
+            {TYPES_BY_CATEGORY[category].map((type) => (
+              <button
+                key={type}
+                type='button'
+                onClick={() => handleTypeChange(type)}
+                className={clsx(
+                  'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+                  wineType === type
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
+                )}>
+                {type}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* 와인 셀렉트박스 */}
         <select
           value={wineId}
           onChange={(e) => setWineId(e.target.value)}
-          className='block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500'>
-          <option value=''>-- 와인을 선택하세요 --</option>
-          {availableWines.map((wine) => (
+          disabled={!category}
+          className='block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500 disabled:bg-gray-50 disabled:text-gray-400'>
+          <option value=''>
+            {!category ? '카테고리를 먼저 선택하세요' : `-- 와인을 선택하세요 (${filteredWines.length}개) --`}
+          </option>
+          {filteredWines.map((wine) => (
             <option key={wine.id} value={wine.id}>
               {wine.name} ({wine.eng_name}) — {wine.price.toLocaleString('ko-KR')}원
             </option>
