@@ -42,7 +42,6 @@ export async function createWine(
 
   if (ratings.length > 0) {
     const ratingData = ratings
-      .filter(r => r.rating > 0)
       .map(r => ({
         wine_id: wine.id,
         rating_type: r.rating_type,
@@ -124,7 +123,6 @@ export async function updateWine(
   // 새 평점 추가
   if (ratings.length > 0) {
     const ratingData = ratings
-      .filter(r => r.rating > 0)
       .map(r => ({
         wine_id: id,
         rating_type: r.rating_type,

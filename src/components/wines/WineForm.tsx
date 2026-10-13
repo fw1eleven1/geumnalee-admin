@@ -43,18 +43,16 @@ export default function WineForm({ wine, mode }: WineFormProps) {
     display_order: wine?.display_order || 0,
   });
 
+  // 저장된 평점이 없는 항목도 0점으로 항상 표시
   const [ratings, setRatings] = useState<WineRatingInput[]>(
-    wine?.ratings?.length
-      ? wine.ratings.map(r => ({
-          rating_type: r.rating_type,
-          rating: r.rating,
-          max_rating: r.max_rating,
-        }))
-      : RATING_TYPES.map(type => ({
-          rating_type: type,
-          rating: 0,
-          max_rating: 5,
-        }))
+    RATING_TYPES.map(type => {
+      const existing = wine?.ratings?.find(r => r.rating_type === type);
+      return {
+        rating_type: type,
+        rating: existing?.rating ?? 0,
+        max_rating: existing?.max_rating ?? 5,
+      };
+    })
   );
 
   const getRedirectUrl = () => {
