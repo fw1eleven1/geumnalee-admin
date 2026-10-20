@@ -166,7 +166,6 @@ export default function InventoryList({ wines: initialWines }: InventoryListProp
 										{wine.category === 'conventional' ? 'Conventional' : 'Natural'}
 									</span>
 									<span className='text-xs text-gray-500'>{wine.type}</span>
-									<span className='text-sm font-medium text-gray-900'>{wine.price.toLocaleString('ko-KR')}원</span>
 								</div>
 							</div>
 						</div>
@@ -189,7 +188,6 @@ export default function InventoryList({ wines: initialWines }: InventoryListProp
 							<th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>와인</th>
 							<th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>카테고리</th>
 							<th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>타입</th>
-							<th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>가격</th>
 							<th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>상태</th>
 							<th className='px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider'>재고</th>
 						</tr>
@@ -219,9 +217,6 @@ export default function InventoryList({ wines: initialWines }: InventoryListProp
 									</span>
 								</td>
 								<td className='px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500'>{wine.type}</td>
-								<td className='px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900'>
-									{wine.price.toLocaleString('ko-KR')}원
-								</td>
 								<td className='px-6 py-4 whitespace-nowrap text-center'>
 									<button
 										onClick={() => handleToggleActive(wine.id, wine.is_active)}
