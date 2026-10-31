@@ -31,7 +31,7 @@ npm run upload-images # 이미지 일괄 업로드 (npx tsx scripts/upload-image
 1. **Server Components**가 Supabase에서 데이터를 직접 조회
 2. **Server Actions** (`src/actions/`)가 CRUD 수행 후 `revalidatePath()`로 대시보드 갱신
 3. Server Action 완료 시 `revalidateMenuPage()`로 메뉴 앱 캐시도 갱신
-4. **Public API** (`/api/public/wines`, `/api/public/tapas`)는 CORS 헤더 포함, 인증 불필요
+4. **Public API** (`/api/public/wines`, `/api/public/tapas`, `/api/public/monthly-wines`, `/api/public/glass-wines`)는 CORS 헤더 포함, 인증 불필요
 
 ### 인증 & 라우팅
 - `src/middleware.ts`에서 Supabase 세션 확인 → 미인증 시 `/login`으로 리다이렉트
@@ -39,9 +39,10 @@ npm run upload-images # 이미지 일괄 업로드 (npx tsx scripts/upload-image
 - 대시보드 layout에서 추가 서버사이드 세션 검증
 
 ### 주요 디렉토리
-- `src/actions/` — Server Actions (wines.ts, tapas.ts, monthly-wines.ts): Supabase CRUD + 이미지 삭제 + 캐시 갱신 + 재고 관리
+- `src/actions/` — Server Actions (wines.ts, tapas.ts, monthly-wines.ts, glass-wines.ts): Supabase CRUD + 이미지 삭제 + 캐시 갱신 + 재고 관리
 - `src/app/dashboard/inventory/` — 와인 재고 관리 페이지 (인라인 수량 편집, optimistic UI)
 - `src/app/dashboard/monthly-wines/` — 이 달의 와인 관리 (할인율, 백원 절삭, 활성화 토글)
+- `src/app/dashboard/glass-wines/` — 글라스 와인 관리 (잔 가격, 활성화 토글). 메뉴 앱 `/wines/glass`(WINE BY THE GLASS)에 표시
 - `src/app/api/upload/` — Cloudflare R2 이미지 업로드 (5MB 제한, 이미지 타입만 허용)
 - `src/lib/supabase/` — client.ts (브라우저용), server.ts (서버용) Supabase 클라이언트
 - `src/lib/cloudflare/r2.ts` — R2 업로드/삭제 유틸리티
@@ -53,6 +54,7 @@ npm run upload-images # 이미지 일괄 업로드 (npx tsx scripts/upload-image
 - **wine_ratings** — wines와 1:N (rating_type: 바디/산미/당도, 0-5점), CASCADE 삭제
 - **tapas** — category(main/side), is_active, display_order
 - **monthly_wines** — wine_id(FK), discount_rate(0~100%), round_down_100(백원절삭), is_active, display_order
+- **glass_wines** — wine_id(FK, UNIQUE), glass_price(잔 가격), is_active, display_order. 노출은 glass_wines.is_active 로만 판단 (바틀 리스트에서 숨긴 와인도 글라스로 판매 가능)
 - RLS: 공개 READ, 인증된 사용자만 WRITE
 
 ### 환경변수

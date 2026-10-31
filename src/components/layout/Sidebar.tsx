@@ -29,6 +29,7 @@ const navigation: NavItem[] = [
 			{ name: 'Natural', href: '/dashboard/wines?category=natural', category: 'natural' },
 		],
 	},
+	{ name: '글라스 와인', href: '/dashboard/glass-wines', icon: GlassIcon },
 	{
 		name: '타파스 관리',
 		href: '/dashboard/tapas',
@@ -41,6 +42,14 @@ const navigation: NavItem[] = [
 	{ name: '재고 관리', href: '/dashboard/inventory', icon: InventoryIcon },
 	{ name: '이 달의 와인', href: '/dashboard/monthly-wines', icon: StarIcon },
 ];
+
+function GlassIcon({ className }: { className?: string }) {
+	return (
+		<svg className={className} fill='none' viewBox='0 0 24 24' strokeWidth={1.5} stroke='currentColor'>
+			<path strokeLinecap='round' strokeLinejoin='round' d='M7.5 3h9l-.6 6a3.9 3.9 0 01-7.8 0L7.5 3zM7.8 6.5h8.4M12 13v8m-3.5 0h7' />
+		</svg>
+	);
+}
 
 function HomeIcon({ className }: { className?: string }) {
 	return (
