@@ -113,3 +113,21 @@ export async function toggleGlassWineActive(id: string, isActive: boolean) {
   revalidatePath('/dashboard/glass-wines');
   revalidateMenuPages();
 }
+
+export async function updateGlassWineOrder(items: { id: string; display_order: number }[]) {
+  const supabase = createClient();
+
+  for (const item of items) {
+    const { error } = await supabase
+      .from('glass_wines')
+      .update({ display_order: item.display_order })
+      .eq('id', item.id);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  revalidatePath('/dashboard/glass-wines');
+  revalidateMenuPages();
+}

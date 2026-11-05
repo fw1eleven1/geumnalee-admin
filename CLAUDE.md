@@ -42,7 +42,7 @@ npm run upload-images # 이미지 일괄 업로드 (npx tsx scripts/upload-image
 - `src/actions/` — Server Actions (wines.ts, tapas.ts, monthly-wines.ts, glass-wines.ts): Supabase CRUD + 이미지 삭제 + 캐시 갱신 + 재고 관리
 - `src/app/dashboard/inventory/` — 와인 재고 관리 페이지 (인라인 수량 편집, optimistic UI)
 - `src/app/dashboard/monthly-wines/` — 이 달의 와인 관리 (할인율, 백원 절삭, 활성화 토글)
-- `src/app/dashboard/glass-wines/` — 글라스 와인 관리 (잔 가격, 활성화 토글). 메뉴 앱 `/wines/glass`(WINE BY THE GLASS)에 표시
+- `src/app/dashboard/glass-wines/` — 글라스 와인 관리 (잔 가격, 활성화 토글, 종류별 드래그 정렬 — 메뉴처럼 Champagne→Sparkling→Red→White→Orange 로 묶고 같은 종류 안에서만 순서 변경). 메뉴 앱 `/wines/glass`(WINE BY THE GLASS)에 표시
 - `src/app/api/upload/` — Cloudflare R2 이미지 업로드 (5MB 제한, 이미지 타입만 허용)
 - `src/lib/supabase/` — client.ts (브라우저용), server.ts (서버용) Supabase 클라이언트
 - `src/lib/cloudflare/r2.ts` — R2 업로드/삭제 유틸리티
