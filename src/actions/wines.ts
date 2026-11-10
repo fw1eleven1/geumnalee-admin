@@ -30,7 +30,9 @@ export async function createWine(
       opinion: formData.opinion || null,
       image_url: formData.image_url || null,
       vivino: formData.vivino || null,
-      is_active: formData.is_active,
+      // 미활용 와인은 메뉴에 노출되지 않도록 항상 비활성으로 저장
+      is_active: formData.is_unused ? false : formData.is_active,
+      is_unused: formData.is_unused,
       display_order: formData.display_order,
     })
     .select()
@@ -108,7 +110,9 @@ export async function updateWine(
       opinion: formData.opinion || null,
       image_url: formData.image_url || null,
       vivino: formData.vivino || null,
-      is_active: formData.is_active,
+      // 미활용 와인은 메뉴에 노출되지 않도록 항상 비활성으로 저장
+      is_active: formData.is_unused ? false : formData.is_active,
+      is_unused: formData.is_unused,
       display_order: formData.display_order,
     })
     .eq('id', id);
@@ -182,13 +186,24 @@ export async function deleteWine(id: string) {
 export async function toggleWineActive(id: string, isActive: boolean) {
   const supabase = createClient();
 
-  const { error } = await supabase
+  let query = supabase
     .from('wines')
     .update({ is_active: isActive })
     .eq('id', id);
 
+  // 미활용 와인은 활성화할 수 없다 (수정 화면에서 미활용 해제 후 활성화)
+  if (isActive) {
+    query = query.eq('is_unused', false);
+  }
+
+  const { data, error } = await query.select('id');
+
   if (error) {
     throw new Error(error.message);
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error('미활용 와인은 활성화할 수 없습니다. 수정 화면에서 미활용을 해제해 주세요.');
   }
 
   revalidatePath('/dashboard/wines');

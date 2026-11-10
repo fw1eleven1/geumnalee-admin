@@ -27,6 +27,7 @@ const navigation: NavItem[] = [
 		submenu: [
 			{ name: 'Conventional', href: '/dashboard/wines?category=conventional&type=Red', category: 'conventional' },
 			{ name: 'Natural', href: '/dashboard/wines?category=natural', category: 'natural' },
+			{ name: '미활용', href: '/dashboard/wines?category=unused', category: 'unused' },
 		],
 	},
 	{ name: '글라스 와인', href: '/dashboard/glass-wines', icon: GlassIcon },

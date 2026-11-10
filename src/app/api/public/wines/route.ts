@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from('wines')
     .select('*, ratings:wine_ratings(*)')
+    .eq('is_unused', false) // 미활용 와인은 active 파라미터와 상관없이 메뉴에 노출하지 않는다
     .order('display_order', { ascending: true });
 
   if (activeOnly) {

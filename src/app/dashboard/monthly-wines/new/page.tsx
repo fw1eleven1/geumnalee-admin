@@ -6,7 +6,8 @@ export default async function NewMonthlyWinePage() {
   const supabase = createClient();
 
   const [{ data: wines }, { data: monthlyWines }] = await Promise.all([
-    supabase.from('wines').select('*').order('name', { ascending: true }),
+    // 미활용 와인은 선택 목록에서 뺀다
+    supabase.from('wines').select('*').eq('is_unused', false).order('name', { ascending: true }),
     supabase.from('monthly_wines').select('wine_id'),
   ]);
 

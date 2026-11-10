@@ -25,6 +25,8 @@ export interface Wine {
   image_url: string | null;
   vivino: string | null;
   is_active: boolean;
+  /** 미활용 와인: 어드민 미활용 탭에서만 보이고 메뉴에는 노출되지 않는다 (항상 is_active=false) */
+  is_unused: boolean;
   display_order: number;
   stock: number;
   created_at: string;
@@ -47,6 +49,7 @@ export interface WineFormData {
   image_url: string;
   vivino: string;
   is_active: boolean;
+  is_unused: boolean;
   display_order: number;
 }
 

@@ -19,7 +19,8 @@ function getSupabaseClient() {
 export async function GET() {
   const supabase = getSupabaseClient();
 
-  // 글라스 노출은 glass_wines.is_active 로만 판단한다 (바틀 리스트에서 숨긴 와인도 글라스로 판매 가능)
+  // 글라스 노출은 glass_wines.is_active 로 판단한다 (바틀 리스트에서 숨긴 와인도 글라스로 판매 가능)
+  // 단, 미활용 와인은 메뉴 어디에도 노출하지 않는다
   const { data, error } = await supabase
     .from('glass_wines')
     .select('*, wine:wines(*, ratings:wine_ratings(*))')
@@ -31,7 +32,7 @@ export async function GET() {
   }
 
   const transformedData = data
-    .filter((item) => item.wine)
+    .filter((item) => item.wine && !item.wine.is_unused)
     .map((item) => {
       const wine = item.wine;
       return {

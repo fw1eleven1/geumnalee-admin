@@ -29,7 +29,7 @@ export async function GET() {
   }
 
   const transformedData = data
-    .filter((item) => item.wine && item.wine.is_active)
+    .filter((item) => item.wine && item.wine.is_active && !item.wine.is_unused)
     .map((item) => {
       const wine = item.wine;
       return {

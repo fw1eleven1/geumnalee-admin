@@ -40,6 +40,7 @@ export default function WineForm({ wine, mode }: WineFormProps) {
     image_url: wine?.image_url || '',
     vivino: wine?.vivino || '',
     is_active: wine?.is_active ?? true,
+    is_unused: wine?.is_unused ?? false,
     display_order: wine?.display_order || 0,
   });
 
@@ -56,6 +57,9 @@ export default function WineForm({ wine, mode }: WineFormProps) {
   );
 
   const getRedirectUrl = () => {
+    if (formData.is_unused) {
+      return '/dashboard/wines?category=unused';
+    }
     if (formData.category === 'conventional') {
       return `/dashboard/wines?category=conventional&type=${formData.type}`;
     }
@@ -240,13 +244,35 @@ export default function WineForm({ wine, mode }: WineFormProps) {
           <input
             type="checkbox"
             id="is_active"
-            checked={formData.is_active}
+            checked={formData.is_active && !formData.is_unused}
             onChange={(e) => updateField('is_active', e.target.checked)}
-            className="h-5 w-5 rounded border-gray-300"
+            disabled={formData.is_unused}
+            className="h-5 w-5 rounded border-gray-300 disabled:opacity-50"
           />
-          <label htmlFor="is_active" className="text-sm text-gray-700">
+          <label
+            htmlFor="is_active"
+            className={formData.is_unused ? 'text-sm text-gray-400' : 'text-sm text-gray-700'}
+          >
             메뉴에 표시
           </label>
+        </div>
+
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="is_unused"
+              checked={formData.is_unused}
+              onChange={(e) => updateField('is_unused', e.target.checked)}
+              className="h-5 w-5 rounded border-gray-300"
+            />
+            <label htmlFor="is_unused" className="text-sm text-gray-700">
+              미활용
+            </label>
+          </div>
+          <p className="pl-8 text-xs text-gray-500">
+            체크하면 비활성화되어 메뉴에 표시되지 않고, 와인 관리의 미활용 탭에서만 보입니다.
+          </p>
         </div>
 
         <Input

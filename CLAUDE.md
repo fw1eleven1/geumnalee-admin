@@ -50,11 +50,12 @@ npm run upload-images # 이미지 일괄 업로드 (npx tsx scripts/upload-image
 - `supabase/schema.sql` — DB 스키마 (테이블, enum, RLS, 트리거, 인덱스)
 
 ### DB 스키마 핵심
-- **wines** — category(conventional/natural), type(Red/White/Orange/Sparkling/Champagne), is_active, display_order, stock(재고 수량, 0 이상)
+- **wines** — category(conventional/natural), type(Red/White/Orange/Sparkling/Champagne), is_active, is_unused(미활용), display_order, stock(재고 수량, 0 이상)
+  - 미활용(is_unused=true) 와인은 어드민 와인 관리의 '미활용' 탭(`?category=unused`)에서만 보이고, 저장 시 항상 is_active=false. 공개 API(바틀·이달의 와인·글라스) 모두에서 제외된다. 컬럼 추가 SQL: `supabase/wine-unused.sql`
 - **wine_ratings** — wines와 1:N (rating_type: 바디/산미/당도, 0-5점), CASCADE 삭제
 - **tapas** — category(main/side), is_active, display_order
 - **monthly_wines** — wine_id(FK), discount_rate(0~100%), round_down_100(백원절삭), is_active, display_order
-- **glass_wines** — wine_id(FK, UNIQUE), glass_price(잔 가격), is_active, display_order. 노출은 glass_wines.is_active 로만 판단 (바틀 리스트에서 숨긴 와인도 글라스로 판매 가능)
+- **glass_wines** — wine_id(FK, UNIQUE), glass_price(잔 가격), is_active, display_order. 노출은 glass_wines.is_active 로 판단 (바틀 리스트에서 숨긴 와인도 글라스로 판매 가능, 단 미활용 와인은 제외)
 - RLS: 공개 READ, 인증된 사용자만 WRITE
 
 ### 환경변수

@@ -31,6 +31,9 @@ interface DeleteTarget {
 
 interface WineListProps {
 	wines: Wine[];
+	/** false 면 드래그 정렬을 끈다 (카테고리가 섞인 미활용 탭) */
+	sortable?: boolean;
+	emptyMessage?: string;
 }
 
 function DragHandle({ className }: { className?: string }) {
@@ -41,20 +44,36 @@ function DragHandle({ className }: { className?: string }) {
 	);
 }
 
+// 미활용 와인은 목록에서 활성화할 수 없어 클릭 불가 배지로 표시한다
+function UnusedBadge({ className = '' }: { className?: string }) {
+	return (
+		<span
+			title='수정 화면에서 미활용을 해제하면 다시 활성화할 수 있습니다'
+			className={`inline-flex px-2 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800 ${className}`}>
+			미활용
+		</span>
+	);
+}
+
 function SortableWineCard({
 	wine,
 	onDelete,
 	onToggleActive,
 	deletingId,
 	togglingId,
+	sortable,
 }: {
 	wine: Wine;
 	onDelete: (id: string, name: string) => void;
 	onToggleActive: (id: string, currentActive: boolean) => void;
 	deletingId: string | null;
 	togglingId: string | null;
+	sortable: boolean;
 }) {
-	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: wine.id });
+	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+		id: wine.id,
+		disabled: !sortable,
+	});
 
 	const style = {
 		transform: CSS.Transform.toString(transform),
@@ -65,12 +84,14 @@ function SortableWineCard({
 	return (
 		<div ref={setNodeRef} style={style} className='bg-white rounded-lg shadow p-4'>
 			<div className='flex gap-4'>
-				<button
-					{...attributes}
-					{...listeners}
-					className='flex-shrink-0 cursor-grab active:cursor-grabbing touch-none p-1 -ml-1 text-gray-400 hover:text-gray-600'>
-					<DragHandle className='h-5 w-5' />
-				</button>
+				{sortable && (
+					<button
+						{...attributes}
+						{...listeners}
+						className='flex-shrink-0 cursor-grab active:cursor-grabbing touch-none p-1 -ml-1 text-gray-400 hover:text-gray-600'>
+						<DragHandle className='h-5 w-5' />
+					</button>
+				)}
 				{wine.image_url && (
 					<div className='h-20 w-16 relative flex-shrink-0'>
 						<Image src={wine.image_url} alt={wine.name} fill className='object-contain' unoptimized />
@@ -82,14 +103,18 @@ function SortableWineCard({
 							<h3 className='text-sm font-medium text-gray-900 truncate'>{wine.name}</h3>
 							<p className='text-xs text-gray-500 truncate'>{wine.eng_name}</p>
 						</div>
-						<button
-							onClick={() => onToggleActive(wine.id, wine.is_active)}
-							disabled={togglingId === wine.id}
-							className={`flex-shrink-0 px-2 py-1 text-xs font-medium rounded-full ${
-								wine.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-							}`}>
-							{togglingId === wine.id ? '...' : wine.is_active ? '활성' : '비활성'}
-						</button>
+						{wine.is_unused ? (
+							<UnusedBadge className='flex-shrink-0' />
+						) : (
+							<button
+								onClick={() => onToggleActive(wine.id, wine.is_active)}
+								disabled={togglingId === wine.id}
+								className={`flex-shrink-0 px-2 py-1 text-xs font-medium rounded-full ${
+									wine.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+								}`}>
+								{togglingId === wine.id ? '...' : wine.is_active ? '활성' : '비활성'}
+							</button>
+						)}
 					</div>
 					<div className='mt-2 flex flex-wrap items-center gap-2'>
 						<span
@@ -128,14 +153,19 @@ function SortableWineRow({
 	onToggleActive,
 	deletingId,
 	togglingId,
+	sortable,
 }: {
 	wine: Wine;
 	onDelete: (id: string, name: string) => void;
 	onToggleActive: (id: string, currentActive: boolean) => void;
 	deletingId: string | null;
 	togglingId: string | null;
+	sortable: boolean;
 }) {
-	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: wine.id });
+	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+		id: wine.id,
+		disabled: !sortable,
+	});
 
 	const style = {
 		transform: CSS.Transform.toString(transform),
@@ -146,12 +176,14 @@ function SortableWineRow({
 	return (
 		<tr ref={setNodeRef} style={style} className='hover:bg-gray-50'>
 			<td className='px-3 py-4 whitespace-nowrap'>
-				<button
-					{...attributes}
-					{...listeners}
-					className='cursor-grab active:cursor-grabbing touch-none p-1 text-gray-400 hover:text-gray-600'>
-					<DragHandle className='h-5 w-5' />
-				</button>
+				{sortable && (
+					<button
+						{...attributes}
+						{...listeners}
+						className='cursor-grab active:cursor-grabbing touch-none p-1 text-gray-400 hover:text-gray-600'>
+						<DragHandle className='h-5 w-5' />
+					</button>
+				)}
 			</td>
 			<td className='px-6 py-4 whitespace-nowrap'>
 				<div className='flex items-center'>
@@ -179,14 +211,18 @@ function SortableWineRow({
 				{wine.price.toLocaleString('ko-KR')}원
 			</td>
 			<td className='px-6 py-4 whitespace-nowrap text-center'>
-				<button
-					onClick={() => onToggleActive(wine.id, wine.is_active)}
-					disabled={togglingId === wine.id}
-					className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-						wine.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-					}`}>
-					{togglingId === wine.id ? '...' : wine.is_active ? '활성화' : '비활성화'}
-				</button>
+				{wine.is_unused ? (
+					<UnusedBadge />
+				) : (
+					<button
+						onClick={() => onToggleActive(wine.id, wine.is_active)}
+						disabled={togglingId === wine.id}
+						className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+							wine.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+						}`}>
+						{togglingId === wine.id ? '...' : wine.is_active ? '활성화' : '비활성화'}
+					</button>
+				)}
 			</td>
 			<td className='px-6 py-4 whitespace-nowrap text-right text-sm font-medium'>
 				<div className='flex justify-end gap-2'>
@@ -209,7 +245,11 @@ function SortableWineRow({
 	);
 }
 
-export default function WineList({ wines: initialWines }: WineListProps) {
+export default function WineList({
+	wines: initialWines,
+	sortable = true,
+	emptyMessage = '등록된 와인이 없습니다.',
+}: WineListProps) {
 	const [wines, setWines] = useState(initialWines);
 	const [deletingId, setDeletingId] = useState<string | null>(null);
 	const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -298,7 +338,7 @@ export default function WineList({ wines: initialWines }: WineListProps) {
 	};
 
 	if (wines.length === 0) {
-		return <div className='bg-white rounded-lg shadow p-8 text-center text-gray-500'>등록된 와인이 없습니다.</div>;
+		return <div className='bg-white rounded-lg shadow p-8 text-center text-gray-500'>{emptyMessage}</div>;
 	}
 
 	return (
@@ -316,6 +356,7 @@ export default function WineList({ wines: initialWines }: WineListProps) {
 							onToggleActive={handleToggleActive}
 							deletingId={deletingId}
 							togglingId={togglingId}
+							sortable={sortable}
 						/>
 					))}
 				</SortableContext>
@@ -345,6 +386,7 @@ export default function WineList({ wines: initialWines }: WineListProps) {
 									onToggleActive={handleToggleActive}
 									deletingId={deletingId}
 									togglingId={togglingId}
+									sortable={sortable}
 								/>
 							))}
 						</SortableContext>

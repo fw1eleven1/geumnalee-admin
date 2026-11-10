@@ -17,6 +17,8 @@ export default async function EditGlassWinePage({ params }: { params: { id: stri
   }
 
   const usedWineIds = (glassWines ?? []).map((gw) => gw.wine_id);
+  // 미활용 와인은 선택 목록에서 빼되, 지금 연결된 와인은 폼이 깨지지 않도록 남긴다
+  const selectableWines = (wines ?? []).filter((w) => !w.is_unused || w.id === glassWine.wine_id);
 
   return (
     <div className='space-y-4 md:space-y-6'>
@@ -31,7 +33,7 @@ export default async function EditGlassWinePage({ params }: { params: { id: stri
       <h1 className='text-xl font-bold text-gray-900 md:text-2xl'>글라스 와인 수정</h1>
 
       <div className='bg-white rounded-lg shadow p-6'>
-        <GlassWineForm wines={wines ?? []} glassWine={glassWine} usedWineIds={usedWineIds} />
+        <GlassWineForm wines={selectableWines} glassWine={glassWine} usedWineIds={usedWineIds} />
       </div>
     </div>
   );

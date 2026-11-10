@@ -17,6 +17,8 @@ export default async function EditMonthlyWinePage({ params }: { params: { id: st
   }
 
   const usedWineIds = (monthlyWines ?? []).map((mw) => mw.wine_id);
+  // 미활용 와인은 선택 목록에서 빼되, 지금 연결된 와인은 폼이 깨지지 않도록 남긴다
+  const selectableWines = (wines ?? []).filter((w) => !w.is_unused || w.id === monthlyWine.wine_id);
 
   return (
     <div className='space-y-4 md:space-y-6'>
@@ -31,7 +33,7 @@ export default async function EditMonthlyWinePage({ params }: { params: { id: st
       <h1 className='text-xl font-bold text-gray-900 md:text-2xl'>이 달의 와인 수정</h1>
 
       <div className='bg-white rounded-lg shadow p-6'>
-        <MonthlyWineForm wines={wines ?? []} monthlyWine={monthlyWine} usedWineIds={usedWineIds} />
+        <MonthlyWineForm wines={selectableWines} monthlyWine={monthlyWine} usedWineIds={usedWineIds} />
       </div>
     </div>
   );

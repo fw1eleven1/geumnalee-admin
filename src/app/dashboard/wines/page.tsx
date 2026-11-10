@@ -4,12 +4,14 @@ import { Button } from '@/components/ui';
 import WineList from './WineList';
 
 interface SearchParams {
-	category?: 'conventional' | 'natural';
+	// 'unused' 는 미활용 탭 (카테고리 구분 없이 미활용 와인만 표시)
+	category?: 'conventional' | 'natural' | 'unused';
 	type?: string;
 }
 
 export default async function WinesPage({ searchParams }: { searchParams: SearchParams }) {
 	const supabase = createClient();
+	const isUnusedTab = searchParams.category === 'unused';
 
 	let query = supabase
 		.from('wines')
@@ -18,11 +20,16 @@ export default async function WinesPage({ searchParams }: { searchParams: Search
 		.order('type', { ascending: true })
 		.order('display_order', { ascending: true });
 
-	if (searchParams.category) {
-		query = query.eq('category', searchParams.category);
-	}
-	if (searchParams.type) {
-		query = query.eq('type', searchParams.type);
+	// 미활용 와인은 미활용 탭에서만 보인다
+	query = query.eq('is_unused', isUnusedTab);
+
+	if (!isUnusedTab) {
+		if (searchParams.category) {
+			query = query.eq('category', searchParams.category);
+		}
+		if (searchParams.type) {
+			query = query.eq('type', searchParams.type);
+		}
 	}
 
 	const { data: wines, error } = await query;
@@ -55,7 +62,18 @@ export default async function WinesPage({ searchParams }: { searchParams: Search
 						Natural
 					</Button>
 				</Link>
+				<Link href='/dashboard/wines?category=unused'>
+					<Button variant={isUnusedTab ? 'primary' : 'ghost'} size='sm'>
+						미활용
+					</Button>
+				</Link>
 			</div>
+
+			{isUnusedTab && (
+				<p className='text-sm text-gray-500'>
+					미활용 와인은 메뉴에 표시되지 않습니다. 다시 사용하려면 수정 화면에서 미활용을 해제하세요.
+				</p>
+			)}
 
 			{/* 컨벤셔널 타입 탭 */}
 			{searchParams.category === 'conventional' && (
@@ -73,7 +91,11 @@ export default async function WinesPage({ searchParams }: { searchParams: Search
 				</div>
 			)}
 
-			<WineList wines={wines || []} />
+			<WineList
+				wines={wines || []}
+				sortable={!isUnusedTab}
+				emptyMessage={isUnusedTab ? '미활용 와인이 없습니다.' : undefined}
+			/>
 		</div>
 	);
 }

@@ -23,6 +23,7 @@ CREATE TABLE wines (
     image_url VARCHAR(500),
     vivino TEXT,
     is_active BOOLEAN DEFAULT true,
+    is_unused BOOLEAN NOT NULL DEFAULT false, -- 미활용: 어드민 미활용 탭에서만 보이고 메뉴에는 노출 안 됨 (항상 is_active=false)
     display_order INTEGER DEFAULT 0,
     stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -79,6 +80,7 @@ CREATE TABLE admin_users (
 CREATE INDEX idx_wines_category ON wines(category);
 CREATE INDEX idx_wines_type ON wines(type);
 CREATE INDEX idx_wines_is_active ON wines(is_active);
+CREATE INDEX idx_wines_is_unused ON wines(is_unused);
 CREATE INDEX idx_wines_display_order ON wines(display_order);
 CREATE INDEX idx_tapas_category ON tapas(category);
 CREATE INDEX idx_tapas_is_active ON tapas(is_active);
